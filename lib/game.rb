@@ -1,6 +1,12 @@
-require "unicode_utils/downcase"
+require "unicode_utils/upcase"
 
 class Game
+  attr_reader :errors, :letters, :good_letters, :bad_letters, :status
+
+  attr_accessor :version
+
+  MAX_ERRORS = 7
+
 
   def initialize(slovo)
     @letters = get_letters(slovo)
@@ -10,15 +16,25 @@ class Game
     @good_letters = []
     @bad_letters = []
     
-    @status = 0
+    @status = :in_progress # :won, :lost
+  end
+
+  def max_errors
+    MAX_ERRORS
+  end
+
+  def errors_left
+    MAX_ERRORS - @errors
   end
 
   def get_letters(slovo)
     if (slovo == nil || slovo == "")
-      abort "Для игры введите загаданное слово в качестве аргумента при запуске программы"
+      abort "Задано пустое слово. Закрываемся"
+    else
+      slovo = slovo.encode("UTF-8")
     end
 
-    return slovo.split("")
+    UnicodeUtils.upcase(slovo).split('')
   end
 
   # 1. спросить букву с консоли
@@ -35,53 +51,61 @@ class Game
       next_step(letter)    
   end
 
-  def next_step(bukva)
-    if @status == -1 || @status == 1
-      return
+  def is_good?(letter)
+    @letters.include?(letter) ||
+      (letter == "Е" && @letters.include?("Ё")) ||
+      (letter == "Ё" && @letters.include?("Е")) ||
+      (letter == "И" && @letters.include?("Й")) ||
+      (letter == "Й" && @letters.include?("И"))
+  end
+
+  def add_letter_to(letters, letter)
+    letters << letter
+
+    case letter
+    when 'И' then letters << 'Й'
+    when 'Й' then letters << 'И'
+    when 'Е' then letters << 'Ё'
+    when 'Ё' then letters << 'Е'
     end
+  end
 
-    bukva = UnicodeUtils.downcase(bukva)
+  def solved?
+    (@letters - @good_letters).empty?
+  end
 
-    if @good_letters.include?(bukva) ||
-      @bad_letters.include?(bukva)
-      return
-    end
+  def repeated?(letter)
+    @good_letters.include?(letter) || @bad_letters.include?(letter)
+  end
 
-    if @letters.include?(bukva)
-      good_letters << bukva
+  def in_progress?
+    @status == :in_progress
+  end
 
-      if @good_letters.size == @letters.uniq.size
-        @status = 1
-      end
+  def won?
+    @status == :won
+  end
 
+  def lost?
+    @status == :lost || @errors >= MAX_ERRORS
+  end
+
+  def next_step(letter)
+    letter = UnicodeUtils.upcase(letter)
+
+    return if @status == :lost || @status == :won
+    return if repeated?(letter)
+
+    if is_good?(letter)
+      add_letter_to(@good_letters, letter)
+
+      @status = :won if solved?
     else
-      @bad_letters << bukva
+      add_letter_to(@bad_letters, letter)
 
       @errors += 1
 
-      if @errors >= 7
-        @status = -1
-      end
+      @status = :lost if lost?
     end
-  end
-
-  def letters
-    return @letters    
-  end
-
-  def good_letters
-    @good_letters    
-  end
-
-  def bad_letters
-    @bad_letters    
-  end
-
-  def status
-    @status
-  end
-
-  def errors
-    @errors    
   end
 end
