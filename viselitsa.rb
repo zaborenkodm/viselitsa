@@ -1,9 +1,9 @@
 # encoding: utf-8
 current_path = "./" + File.dirname(__FILE__)
 
-require current_path + "/game.rb"
-require current_path + "/result_printer.rb"
-require current_path + "/word_reader.rb"
+require current_path + "/lib/game.rb"
+require current_path + "/lib/result_printer.rb"
+require current_path + "/lib/word_reader.rb"
 require "unicode_utils/downcase"
 
 printer = ResultPrinter.new
